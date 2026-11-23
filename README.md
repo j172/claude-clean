@@ -44,9 +44,10 @@ git clone https://github.com/j172/claude-clean "$HOME\.claude\tools\claude-clean
 
 1. **列出執行中的 session**：名稱、PID、專案資料夾、啟動時間；從 Claude Code 裡執行時，會標出「← 本視窗」。
    資料來源是 `~/.claude/sessions/<PID>.json`，每個執行中的 session 都會有一份。
-2. **停掉該停的 `claude.exe`**（用 `taskkill /T /F`）：
+2. **停掉該停的 `claude.exe`**（用 `taskkill /T /F`），依序判斷：
+   - **名稱含 `DELETE` 的 session（最優先）**：想關哪個視窗，就先把它改名成例如「PG1 DELETE」（不分大小寫），再跑一次這個工具；
    - 沒有登記檔的殘留程序，例如視窗重開後留下的舊程序；
-   - 同名重複的 session，只留最新開的那個。
+   - 同名重複的 session，只留最新開的那個（忘了加 DELETE 時的保險）。
    - **永遠不碰**：Chrome 擴充功能的 Claude Code、執行這個指令的 session 本身。
 3. **刪掉該刪的檔案**：
    - `~/.claude/projects/<專案>/` 中，對應 session **已經不在執行**的對話紀錄 `<id>.jsonl` 和同名資料夾；

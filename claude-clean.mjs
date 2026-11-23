@@ -1,7 +1,8 @@
 // claude-clean.mjs — 一鍵清理本機 Claude Code session（Windows）
 //
 // 做三件事：
-//   1. 停掉「該停的」claude.exe：
+//   1. 停掉「該停的」claude.exe（依序判斷）：
+//      0. 名稱含 DELETE（不分大小寫）的 session：使用者用改名標記要關，最優先
 //      a. 沒有登記檔（~/.claude/sessions/<PID>.json）的殘留程序
 //      b. 同名重複的 session，只留最新開的那個
 //      永遠不碰：Chrome 擴充功能的 Claude Code、執行本工具的 session 自己。
@@ -103,15 +104,23 @@ const alivePids = new Set(claudes.map((p) => p.pid));
 const aliveReg = reg.filter((r) => alivePids.has(r.pid));
 
 const toStop = [];
+const stopSet = new Set();
+const addStop = (pid, name, why) => { if (!stopSet.has(pid)) { stopSet.add(pid); toStop.push({ pid, name, why }); } };
+// 0. 名稱含 DELETE（不分大小寫）：使用者用改名標記「這個要關」，優先處理
+for (const r of aliveReg) {
+  if (r.pid === selfPid) continue;
+  if (/delete/i.test(r.name)) addStop(r.pid, r.name, '名稱含 DELETE（使用者標記要關）');
+}
 // a. 沒有登記檔的殘留程序
 for (const p of claudes) {
   if (p.pid === selfPid) continue;
   if (underChrome(p)) continue; // Chrome 擴充功能，不碰
-  if (!regByPid.has(p.pid)) toStop.push({ pid: p.pid, why: '沒有登記檔（殘留程序）', name: '-' });
+  if (!regByPid.has(p.pid)) addStop(p.pid, '-', '沒有登記檔（殘留程序）');
 }
 // b. 同名重複：保留最新開的
 const byName = new Map();
 for (const r of aliveReg) {
+  if (stopSet.has(r.pid)) continue; // 已因 DELETE 標記要停的，不參與同名比較
   const k = r.name.toLowerCase();
   if (!byName.has(k)) byName.set(k, []);
   byName.get(k).push(r);
@@ -121,7 +130,7 @@ for (const list of byName.values()) {
   list.sort((a, b) => b.startedAt - a.startedAt);
   for (const r of list.slice(1)) {
     if (r.pid === selfPid) continue;
-    toStop.push({ pid: r.pid, why: `同名重複，保留較新的 PID ${list[0].pid}`, name: r.name });
+    addStop(r.pid, r.name, `同名重複，保留較新的 PID ${list[0].pid}`);
   }
 }
 
