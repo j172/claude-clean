@@ -1,0 +1,8 @@
+# claude-clean 名冊範例：複製成 roster.txt 後改成你自己的正式 session 名稱。
+# 每行一個名稱（不分大小寫），# 開頭為註解。
+# 不在名冊上的 session 只會被列出來，不會自動停掉。
+Warroom
+SA
+PG1
+PG2
+PG3

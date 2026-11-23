@@ -139,6 +139,16 @@ say('--- 執行中的 session（名稱 / PID / 專案 / 啟動時間）---');
 for (const r of aliveReg.sort((a, b) => a.name.localeCompare(b.name))) {
   say(`  ${r.name.padEnd(16)} ${String(r.pid).padStart(6)}  ${r.cwd}  ${fmtTime(r.startedAt)}${r.pid === selfPid ? '  ← 本視窗' : ''}`);
 }
+// 名冊：同資料夾 roster.txt（每行一個正式 session 名稱，# 開頭為註解）。不在名冊上的只列出、不自動停。
+const ROSTER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'roster.txt');
+if (fs.existsSync(ROSTER)) {
+  const roster = new Set(fs.readFileSync(ROSTER, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).map((l) => l.toLowerCase()));
+  const off = aliveReg.filter((r) => !roster.has(r.name.toLowerCase()) && !stopSet.has(r.pid) && r.pid !== selfPid);
+  say('');
+  say(`--- 不在名冊上的 session（只列出，不會停；確認不需要就改名加 DELETE）：${off.length} 個 ---`);
+  for (const r of off) say(`  ${r.name.padEnd(16)} ${String(r.pid).padStart(6)}  ${r.cwd}  ${fmtTime(r.startedAt)}`);
+}
+
 say('');
 say(`--- 要停的程序：${toStop.length} 個 ---`);
 for (const s of toStop) say(`  PID ${s.pid}  ${s.name}  （${s.why}）`);
