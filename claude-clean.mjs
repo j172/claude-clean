@@ -1,7 +1,7 @@
 // claude-clean.mjs — 一鍵清理本機 Claude Code session（Windows）
 //
 // 做三件事：
-//   1. 停掉「該停的」claude.exe（依序判斷）：
+//   1. 停掉「該停的」claude.exe（依序判斷；另有：不在 roster.txt 名冊、已開超過 2 小時且閒置 30 分鐘的也會停）：
 //      0. 名稱含 DELETE（不分大小寫）的 session：使用者用改名標記要關，最優先
 //      a. 沒有登記檔（~/.claude/sessions/<PID>.json）的殘留程序
 //      b. 同名重複的 session，只留最新開的那個
@@ -139,14 +139,34 @@ say('--- 執行中的 session（名稱 / PID / 專案 / 啟動時間）---');
 for (const r of aliveReg.sort((a, b) => a.name.localeCompare(b.name))) {
   say(`  ${r.name.padEnd(16)} ${String(r.pid).padStart(6)}  ${r.cwd}  ${fmtTime(r.startedAt)}${r.pid === selfPid ? '  ← 本視窗' : ''}`);
 }
-// 名冊：同資料夾 roster.txt（每行一個正式 session 名稱，# 開頭為註解）。不在名冊上的只列出、不自動停。
+// 名冊：同資料夾 roster.txt（每行一個正式 session 名稱，# 開頭為註解）。
+// 不在名冊上的 session：開了超過 2 小時、而且 30 分鐘內沒有任何對話紀錄寫入（閒置）→ 自動停。
+// 剛開的或還在動的只列出、不停，避免誤停新開還沒命名的視窗。
 const ROSTER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'roster.txt');
+const MIN_AGE_MS = 2 * 60 * 60 * 1000;
+const IDLE_MS = 30 * 60 * 1000;
+function lastWriteOf(sessionId) {
+  if (!sessionId || !fs.existsSync(PROJECTS)) return 0;
+  for (const d of fs.readdirSync(PROJECTS)) {
+    const f = path.join(PROJECTS, d, `${sessionId}.jsonl`);
+    if (fs.existsSync(f)) return fs.statSync(f).mtimeMs;
+  }
+  return 0;
+}
 if (fs.existsSync(ROSTER)) {
   const roster = new Set(fs.readFileSync(ROSTER, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).map((l) => l.toLowerCase()));
   const off = aliveReg.filter((r) => !roster.has(r.name.toLowerCase()) && !stopSet.has(r.pid) && r.pid !== selfPid);
+  const nowMs = Date.now();
+  const keepList = [];
+  for (const r of off) {
+    const age = nowMs - r.startedAt;
+    const idle = nowMs - lastWriteOf(r.sessionId);
+    if (age > MIN_AGE_MS && idle > IDLE_MS) addStop(r.pid, r.name, `不在名冊、已開 ${Math.round(age / 3600000)} 小時、閒置 ${Math.round(idle / 60000)} 分鐘`);
+    else keepList.push(r);
+  }
   say('');
-  say(`--- 不在名冊上的 session（只列出，不會停；確認不需要就改名加 DELETE）：${off.length} 個 ---`);
-  for (const r of off) say(`  ${r.name.padEnd(16)} ${String(r.pid).padStart(6)}  ${r.cwd}  ${fmtTime(r.startedAt)}`);
+  say(`--- 不在名冊但先保留的 session（剛開不到 2 小時，或 30 分鐘內還有動作）：${keepList.length} 個 ---`);
+  for (const r of keepList) say(`  ${r.name.padEnd(16)} ${String(r.pid).padStart(6)}  ${r.cwd}  ${fmtTime(r.startedAt)}`);
 }
 
 say('');

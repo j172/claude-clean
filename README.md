@@ -49,7 +49,7 @@ git clone https://github.com/j172/claude-clean "$HOME\.claude\tools\claude-clean
    - 沒有登記檔的殘留程序，例如視窗重開後留下的舊程序；
    - 同名重複的 session，只留最新開的那個（忘了加 DELETE 時的保險）。
    - **永遠不碰**：Chrome 擴充功能的 Claude Code、執行這個指令的 session 本身。
-   - **名冊（選用）**：在本資料夾放一個 `roster.txt`，每行一個正式 session 名稱（範例見 `roster.example.txt`）。不在名冊上的 session 會另外列成一區，**只列出、不自動停**；確認不需要後，改名加 `DELETE` 再跑一次即可。`roster.txt` 不進 git。
+   - **不在名冊上、而且閒置的 session**（選用，需要 `roster.txt`）：在本資料夾放一個 `roster.txt`，每行一個正式 session 名稱（範例見 `roster.example.txt`，`roster.txt` 不進 git）。不在名冊上的 session，只要**已經開超過 2 小時、而且 30 分鐘內沒有任何對話紀錄寫入**，就會自動停掉；剛開的或還在動的只列出、先保留。
 3. **刪掉該刪的檔案**：
    - `~/.claude/projects/<專案>/` 中，對應 session **已經不在執行**的對話紀錄 `<id>.jsonl` 和同名資料夾；
    - TokenEconomizer 留下的空 `te-side` 資料夾；
